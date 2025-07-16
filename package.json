@@ -1,5 +1,5 @@
 {
-  "name": "whatsapp-bot-ui",
+  "name": "whatsapp-link-pair",
   "type": "module",
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.0"
