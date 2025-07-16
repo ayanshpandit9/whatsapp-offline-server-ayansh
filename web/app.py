@@ -6,7 +6,7 @@ UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 def start_bot():
-    subprocess.Popen(["node", "worker/bot.js"])
+    subprocess.Popen(["node", "web/bot.js"])
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -21,7 +21,7 @@ def index():
             with open(os.path.join(UPLOAD_FOLDER, "config.txt"), "w") as f:
                 f.write(f"{target}\n{delay}")
 
-        return "✅ Uploaded. Bot will auto start in 5s..."
+        return "✅ Uploaded. Bot will start shortly..."
 
     return render_template("index.html")
 
