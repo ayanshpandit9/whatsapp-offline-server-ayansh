@@ -1,10 +1,10 @@
 {
-  "name": "whatsapp-bot",
+  "name": "whatsapp-bot-webonly",
   "version": "1.0.0",
   "type": "module",
-  "main": "worker/bot.js",
+  "main": "web/bot.js",
   "scripts": {
-    "start": "node worker/bot.js"
+    "start": "node web/bot.js"
   },
   "dependencies": {
     "@hapi/boom": "^10.0.0",
