@@ -1,11 +1,8 @@
 {
-  "name": "whatsapp-bot-webonly",
+  "name": "whatsapp-pair-panel",
   "version": "1.0.0",
   "type": "module",
-  "main": "web/bot.js",
-  "scripts": {
-    "start": "node web/bot.js"
-  },
+  "main": "bot.js",
   "dependencies": {
     "@hapi/boom": "^10.0.0",
     "@whiskeysockets/baileys": "^6.7.0"
