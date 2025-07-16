@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WhatsApp Bot Panel</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #4e9f3d, #34d7b7, #55c7f7);
+            font-family: Arial, sans-serif;
+            text-align: center;
+            color: white;
+        }
+        .btn {
+            display: block;
+            margin: 20px auto;
+            padding: 15px 30px;
+            width: 250px;
+            font-size: 18px;
+            border: 2px solid white;
+            background: transparent;
+            color: white;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .btn:hover {
+            background: white;
+            color: black;
+        }
+    </style>
+</head>
+<body>
+    <h1>WhatsApp Bot Panel</h1>
+    <form action="/pair" method="post">
+        <input type="text" name="country" placeholder="Country Code (e.g. +91)" required><br><br>
+        <input type="text" name="number" placeholder="Phone Number" required><br><br>
+        <button class="btn" type="submit">PAIR CODE</button>
+    </form>
+    <a href="https://github.com/" class="btn">GITHUB</a>
+    <a href="https://whatsapp.com" class="btn">WHATSAPP</a>
+</body>
+</html>
