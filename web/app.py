@@ -1,9 +1,12 @@
 from flask import Flask, request, render_template
-import os
+import os, subprocess, threading
 
 app = Flask(__name__)
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+def start_bot():
+    subprocess.Popen(["node", "worker/bot.js"])
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -17,9 +20,11 @@ def index():
             message_file.save(path)
             with open(os.path.join(UPLOAD_FOLDER, "config.txt"), "w") as f:
                 f.write(f"{target}\n{delay}")
-        return "✅ Files uploaded. Bot will start messaging shortly."
+
+        return "✅ Uploaded. Bot will auto start in 5s..."
 
     return render_template("index.html")
 
 if __name__ == "__main__":
+    threading.Thread(target=start_bot).start()
     app.run(host="0.0.0.0", port=10000)
