@@ -1,24 +1,16 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>WhatsApp Pair Code</title>
-  <style>
-    body { background: #111; color: #fff; text-align: center; padding: 50px; font-family: sans-serif; }
-    input, button { padding: 10px; margin: 10px; font-size: 16px; }
-    .code-box { background: #222; padding: 20px; margin-top: 30px; display: inline-block; border-radius: 8px; }
-  </style>
+    <title>Start Pairing</title>
+    <style>
+        body { background: #111; color: #fff; font-family: sans-serif; text-align: center; padding-top: 80px; }
+        .button { padding: 12px 25px; background: #28a745; border: none; font-size: 18px; color: white; cursor: pointer; }
+    </style>
 </head>
 <body>
-  <h2>🔐 WhatsApp Real Pair Code Panel</h2>
-  <form method="POST">
-    <button type="submit">Generate Real Pair Code</button>
-  </form>
-
-  {% if pair_code %}
-    <div class="code-box">
-      <h3>{{ pair_code }}</h3>
-      <p>🖥️ Check Render logs for QR / Pair Code</p>
-    </div>
-  {% endif %}
+    <h2>ðŸ¤– WhatsApp Bot Login</h2>
+    <form method="GET" action="/pair">
+        <button class="button" type="submit">âž• Pair Code Login</button>
+    </form>
 </body>
 </html>
