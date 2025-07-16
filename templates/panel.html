@@ -1,17 +1,25 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Connected - WhatsApp Bot</title>
+    <title>Enter Number</title>
+    <style>
+        body { background: #111; color: #fff; font-family: sans-serif; text-align: center; padding-top: 60px; }
+        input, button { padding: 10px; margin: 10px; font-size: 16px; }
+        .code-box { background: #222; padding: 20px; margin-top: 30px; display: inline-block; border-radius: 8px; }
+    </style>
 </head>
-<body style="background-color: #222; color: white; font-family: Arial, sans-serif; text-align: center;">
-    <h2>✅ Connected as {{ phone }}</h2>
-    <form action="/start" method="post" enctype="multipart/form-data">
-        <input type="text" name="jid" placeholder="Target ID" required><br><br>
-        <input type="file" name="msgfile" accept=".txt" required><br><br>
-        <input type="number" name="delay" placeholder="Delay (sec)" value="30" required><br><br>
-        <input type="text" name="prefix" placeholder="Name Prefix"><br><br>
-        <input type="text" name="name" placeholder="Your Name"><br><br>
-        <button type="submit">Start Messaging</button>
+<body>
+    <h2>📱 Enter your Phone Number</h2>
+    <form method="POST" action="/">
+        <input name="number" placeholder="e.g. +91XXXXXXXXXX" required><br>
+        <button type="submit">Submit</button>
     </form>
+
+    {% if pair_code %}
+    <div class="code-box">
+        <h3>✅ Real Pair Code Generating...</h3>
+        <p>🔐 Please check Render logs & scan the code within 1 minute.</p>
+    </div>
+    {% endif %}
 </body>
 </html>
