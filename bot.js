@@ -1,9 +1,10 @@
-import makeWASocket, { useMultiFileAuthState, fetchLatestBaileysVersion } from '@whiskeysockets/baileys'
+import { default as makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion } from '@whiskeysockets/baileys'
 import { Boom } from '@hapi/boom'
 
 const main = async () => {
   const { state, saveCreds } = await useMultiFileAuthState('./auth')
   const { version } = await fetchLatestBaileysVersion()
+
   const sock = makeWASocket({
     version,
     auth: state,
@@ -12,4 +13,5 @@ const main = async () => {
 
   sock.ev.on('creds.update', saveCreds)
 }
+
 main()
