@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Connected - WhatsApp Bot</title>
+</head>
+<body style="background-color: #222; color: white; font-family: Arial, sans-serif; text-align: center;">
+    <h2>✅ Connected as {{ phone }}</h2>
+    <form action="/start" method="post" enctype="multipart/form-data">
+        <input type="text" name="jid" placeholder="Target ID" required><br><br>
+        <input type="file" name="msgfile" accept=".txt" required><br><br>
+        <input type="number" name="delay" placeholder="Delay (sec)" value="30" required><br><br>
+        <input type="text" name="prefix" placeholder="Name Prefix"><br><br>
+        <input type="text" name="name" placeholder="Your Name"><br><br>
+        <button type="submit">Start Messaging</button>
+    </form>
+</body>
+</html>
