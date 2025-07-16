@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WhatsApp Bot Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-dark text-white">
+    <div class="container py-5">
+        <h2 class="mb-4 text-center text-success">WhatsApp Automation Panel</h2>
+        <form method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label>Target ID:</label>
+                <input type="text" name="target" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>Message File (.txt):</label>
+                <input type="file" name="messageFile" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>Delay (in seconds):</label>
+                <input type="number" name="delay" class="form-control" min="10" value="30" required>
+            </div>
+            <button type="submit" class="btn btn-success btn-block">Start Messaging</button>
+        </form>
+    </div>
+</body>
+</html>
