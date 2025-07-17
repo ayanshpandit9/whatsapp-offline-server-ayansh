@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Messaging Panel</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <h1>Messaging Panel</h1>
+  <form id="messaging-form" enctype="multipart/form-data">
+    <label for="target">Target (Phone Number or Group UID):</label>
+    <input type="text" id="target" name="target" required>
+    <label for="targetName">Target Name:</label>
+    <input type="text" id="targetName" name="targetName" required>
+    <label for="intervalTime">Interval Time (seconds):</label>
+    <input type="number" id="intervalTime" name="intervalTime" required>
+    <label for="messageFile">Upload Message File (or enter messages below):</label>
+    <input type="file" id="messageFile" name="messageFile" accept=".txt">
+    <label for="messages">Or Enter Messages (one per line):</label>
+    <textarea id="messages" name="messages" rows="5" placeholder="Enter messages, one per line"></textarea>
+    <button type="submit">Start Messaging</button>
+  </form>
+  <p id="status"></p>
+
+  <script>
+    document.getElementById("messaging-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const formData = new FormData();
+      formData.append("target", document.getElementById("target").value);
+      formData.append("targetName", document.getElementById("targetName").value);
+      formData.append("intervalTime", document.getElementById("intervalTime").value);
+      formData.append("messages", document.getElementById("messages").value);
+      const messageFile = document.getElementById("messageFile").files[0];
+      if (messageFile) {
+        formData.append("messageFile", messageFile);
+      }
+
+      const response = await fetch("/start-messaging", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await response.json();
+      document.getElementById("status").innerText = data.message || `Error: ${data.error}`;
+    });
+  </script>
+</body>
+</html>
