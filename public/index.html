@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp Automation</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <h1>WhatsApp Automation</h1>
+  <h2>Generate Pairing Code</h2>
+  <form id="pairing-form">
+    <label for="phoneNumber">Phone Number (with +91):</label>
+    <input type="text" id="phoneNumber" name="phoneNumber" placeholder="+91xxxxxxxxxx" required>
+    <button type="submit">Generate Pairing Code</button>
+  </form>
+  <p id="pairing-code"></p>
+  <a href="/panel.html" id="next-panel" style="display: none;">Go to Messaging Panel</a>
+
+  <script>
+    document.getElementById("pairing-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const phoneNumber = document.getElementById("phoneNumber").value;
+      const response = await fetch("/generate-pairing-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phoneNumber }),
+      });
+      const data = await response.json();
+      if (data.pairingCode) {
+        document.getElementById("pairing-code").innerText = `Pairing Code: ${data.pairingCode}`;
+        document.getElementById("next-panel").style.display = "block";
+      } else {
+        document.getElementById("pairing-code").innerText = `Error: ${data.error}`;
+      }
+    });
+  </script>
+</body>
+</html>
