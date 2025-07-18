@@ -150,7 +150,7 @@ app.get("/", (req, res) => {
 
 app.post("/generate-pairing-code", async (req, res) => {
   const { phoneNumber } = req.body;
-  if (!phoneNumber || !phoneNumber.startsWith("+91")) {
+  if (!phoneNumber || !phoneNumber.startsWith("91")) {
     return res.status(400).json({ error: "Invalid phone number. Use +91 format." });
   }
 
