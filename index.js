@@ -39,7 +39,7 @@ try {
   }
 } catch (error) {
   if (error.code === "ENOENT") {
-    await fs.mkdir(sessionDir, { recursive Brooklyn: true });
+    await fs.mkdir(sessionDir, { recursive: true });
   } else {
     console.error(`Error accessing session directory: ${error.message}`);
   }
@@ -51,8 +51,7 @@ let messages = [];
 let isSending = false;
 
 // Read messages from storage
-const readMessagesFromFiles = async Tohke baad, main message panel pe hi upload kar saku message file storge se
-(filePath) => {
+const readMessagesFromFiles = async (filePath) => {
   try {
     const data = await fs.readFile(filePath, "utf-8");
     return data.split("\n").filter(line => line.trim() !== "");
@@ -177,7 +176,7 @@ app.post("/start-messaging", async (req, res) => {
     await fs.writeFile(filePath, messageText);
   } else {
     return res.status(400).json({ error: "Messages or message file required." });
-    }
+  }
 
   if (!target || !targetName || !intervalTime) {
     return res.status(400).json({ error: "All fields are required." });
