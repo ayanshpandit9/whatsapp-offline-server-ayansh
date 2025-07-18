@@ -18,7 +18,15 @@ app.use(express.static(path.join(__dirname, "public")));
 
 // Ensure storage directory exists
 const storageDir = path.join(__dirname, "storage");
-fs.mkdir(storageDir, { recursive: true });
+try {
+  await fs.access(storageDir); // Check if directory exists
+} catch (error) {
+  if (error.code === "ENOENT") {
+    await fs.mkdir(storageDir, { recursive: true });
+  } else {
+    console.error(`Error accessing storage directory: ${error.message}`);
+  }
+}
 
 // Global variables
 let MznKing = null;
@@ -54,7 +62,7 @@ const connect = async () => {
       console.log(chalk.yellow("Your WhatsApp Login Successfully"));
     }
     if (connection === "close" && lastDisconnect && lastDisconnect.error && lastDisconnect.error.output.statusCode !== 401) {
-      const reconnectAttempts = 0;
+      let reconnectAttempts = 0;
       reconnectAttempts++;
       const delay = Math.min(5 * 1000, reconnectAttempts * 1000);
       console.log(`Connection closed, attempting to reconnect in ${delay / 1000} seconds...`);
