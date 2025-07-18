@@ -23,8 +23,9 @@ try {
 } catch (error) {
   if (error.code === "ENOENT") {
     await fs.mkdir(storageDir, { recursive: true });
+    console.log("Created storage directory:", storageDir);
   } else {
-    console.error(`Error accessing storage directory: ${error.message}`);
+    console.error("Error accessing storage directory:", error.message);
   }
 }
 
@@ -36,12 +37,14 @@ try {
     console.error(`${sessionDir} is not a directory. Deleting and recreating...`);
     await fs.unlink(sessionDir);
     await fs.mkdir(sessionDir, { recursive: true });
+    console.log("Recreated session directory:", sessionDir);
   }
 } catch (error) {
   if (error.code === "ENOENT") {
     await fs.mkdir(sessionDir, { recursive: true });
+    console.log("Created session directory:", sessionDir);
   } else {
-    console.error(`Error accessing session directory: ${error.message}`);
+    console.error("Error accessing session directory:", error.message);
   }
 }
 
@@ -56,7 +59,7 @@ const readMessagesFromFiles = async (filePath) => {
     const data = await fs.readFile(filePath, "utf-8");
     return data.split("\n").filter(line => line.trim() !== "");
   } catch (err) {
-    console.error(`Error reading message file ${filePath}:`, err);
+    console.error("Error reading message file:", err.message);
     return [];
   }
 };
@@ -64,6 +67,7 @@ const readMessagesFromFiles = async (filePath) => {
 // Connect to WhatsApp
 const connect = async () => {
   try {
+    console.log("Attempting to connect with session from:", sessionDir);
     const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
     MznKing = makeWASocket({
       logger: pino({ level: "silent" }),
@@ -80,16 +84,17 @@ const connect = async () => {
         console.log(chalk.yellow("Your WhatsApp Login Successfully"));
       }
       if (connection === "close" && lastDisconnect && lastDisconnect.error) {
-        let reconnectAttempts = (lastDisconnect.error.output?.statusCode === 401) ? 0 : (reconnectAttempts || 0) + 1;
+        const statusCode = lastDisconnect.error.output?.statusCode;
+        let reconnectAttempts = (statusCode === 401) ? 0 : (reconnectAttempts || 0) + 1;
         const delay = Math.min(5 * 1000, reconnectAttempts * 1000);
-        console.log(`Connection closed, attempting to reconnect in ${delay / 1000} seconds...`);
+        console.log(`Connection closed (Status: ${statusCode}). Reconnecting in ${delay / 1000} seconds...`);
         setTimeout(connect, delay);
       }
     });
 
     MznKing.ev.on("creds.update", saveCreds);
   } catch (error) {
-    console.error(`Connection error: ${error.message}`);
+    console.error("Connection error:", error.message);
   }
 };
 
@@ -137,7 +142,7 @@ Message ==> ${rawMessage}
       currentIndex = (currentIndex + 1) % messages.length;
       setTimeout(sendNextMessage, intervalTime * 1000);
     } catch (error) {
-      console.error(`Error sending message: ${error}`);
+      console.error("Error sending message:", error.message);
       setTimeout(sendNextMessage, intervalTime * 1000);
     }
   };
@@ -158,14 +163,16 @@ app.post("/generate-pairing-code", async (req, res) => {
   }
 
   try {
+    console.log("Generating pairing code for:", phoneNumber);
     await connect();
     if (!MznKing) throw new Error("WhatsApp connection not established");
     const code = await MznKing.requestPairingCode(phoneNumber.replace(/[^0-9]/g, ""));
     const formattedCode = code?.match(/.{1,4}/g)?.join("-") || code;
     if (!formattedCode) throw new Error("No pairing code received from WhatsApp");
+    console.log("Generated pairing code:", formattedCode);
     res.json({ pairingCode: formattedCode });
   } catch (error) {
-    console.error(`Pairing code error: ${error.message}`);
+    console.error("Pairing code generation error:", error.message);
     res.status(500).json({ error: `Failed to generate pairing code: ${error.message}` });
   }
 });
