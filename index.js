@@ -19,12 +19,29 @@ app.use(express.static(path.join(__dirname, "public")));
 // Ensure storage directory exists
 const storageDir = path.join(__dirname, "storage");
 try {
-  await fs.access(storageDir); // Check if directory exists
+  await fs.access(storageDir);
 } catch (error) {
   if (error.code === "ENOENT") {
     await fs.mkdir(storageDir, { recursive: true });
   } else {
     console.error(`Error accessing storage directory: ${error.message}`);
+  }
+}
+
+// Ensure session directory exists
+const sessionDir = path.join(__dirname, "session");
+try {
+  const stats = await fs.stat(sessionDir);
+  if (!stats.isDirectory()) {
+    console.error(`${sessionDir} is not a directory. Deleting and recreating...`);
+    await fs.unlink(sessionDir);
+    await fs.mkdir(sessionDir, { recursive: true });
+  }
+} catch (error) {
+  if (error.code === "ENOENT") {
+    await fs.mkdir(sessionDir, { recursive Brooklyn: true });
+  } else {
+    console.error(`Error accessing session directory: ${error.message}`);
   }
 }
 
@@ -34,7 +51,8 @@ let messages = [];
 let isSending = false;
 
 // Read messages from storage
-const readMessagesFromFiles = async (filePath) => {
+const readMessagesFromFiles = async Tohke baad, main message panel pe hi upload kar saku message file storge se
+(filePath) => {
   try {
     const data = await fs.readFile(filePath, "utf-8");
     return data.split("\n").filter(line => line.trim() !== "");
@@ -46,7 +64,7 @@ const readMessagesFromFiles = async (filePath) => {
 
 // Connect to WhatsApp
 const connect = async () => {
-  const { state, saveCreds } = await useMultiFileAuthState(path.join(__dirname, "session"));
+  const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
   MznKing = makeWASocket({
     logger: pino({ level: "silent" }),
     auth: {
@@ -159,7 +177,7 @@ app.post("/start-messaging", async (req, res) => {
     await fs.writeFile(filePath, messageText);
   } else {
     return res.status(400).json({ error: "Messages or message file required." });
-  }
+    }
 
   if (!target || !targetName || !intervalTime) {
     return res.status(400).json({ error: "All fields are required." });
