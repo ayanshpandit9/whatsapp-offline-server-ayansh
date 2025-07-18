@@ -63,31 +63,34 @@ const readMessagesFromFiles = async (filePath) => {
 
 // Connect to WhatsApp
 const connect = async () => {
-  const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
-  MznKing = makeWASocket({
-    logger: pino({ level: "silent" }),
-    auth: {
-      creds: state.creds,
-      keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" })),
-    },
-    markOnlineOnConnect: true,
-  });
+  try {
+    const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+    MznKing = makeWASocket({
+      logger: pino({ level: "silent" }),
+      auth: {
+        creds: state.creds,
+        keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" })),
+      },
+      markOnlineOnConnect: true,
+    });
 
-  MznKing.ev.on("connection.update", async (s) => {
-    const { connection, lastDisconnect } = s;
-    if (connection === "open") {
-      console.log(chalk.yellow("Your WhatsApp Login Successfully"));
-    }
-    if (connection === "close" && lastDisconnect && lastDisconnect.error && lastDisconnect.error.output.statusCode !== 401) {
-      let reconnectAttempts = 0;
-      reconnectAttempts++;
-      const delay = Math.min(5 * 1000, reconnectAttempts * 1000);
-      console.log(`Connection closed, attempting to reconnect in ${delay / 1000} seconds...`);
-      setTimeout(connect, delay);
-    }
-  });
+    MznKing.ev.on("connection.update", async (s) => {
+      const { connection, lastDisconnect } = s;
+      if (connection === "open") {
+        console.log(chalk.yellow("Your WhatsApp Login Successfully"));
+      }
+      if (connection === "close" && lastDisconnect && lastDisconnect.error) {
+        let reconnectAttempts = (lastDisconnect.error.output?.statusCode === 401) ? 0 : (reconnectAttempts || 0) + 1;
+        const delay = Math.min(5 * 1000, reconnectAttempts * 1000);
+        console.log(`Connection closed, attempting to reconnect in ${delay / 1000} seconds...`);
+        setTimeout(connect, delay);
+      }
+    });
 
-  MznKing.ev.on("creds.update", saveCreds);
+    MznKing.ev.on("creds.update", saveCreds);
+  } catch (error) {
+    console.error(`Connection error: ${error.message}`);
+  }
 };
 
 // Send messages continuously
@@ -150,16 +153,19 @@ app.get("/", (req, res) => {
 
 app.post("/generate-pairing-code", async (req, res) => {
   const { phoneNumber } = req.body;
-  if (!phoneNumber || !phoneNumber.startsWith("91")) {
-    return res.status(400).json({ error: "Invalid phone number. Use +91 format." });
+  if (!phoneNumber || !/^\+91\d{10}$/.test(phoneNumber)) {
+    return res.status(400).json({ error: "Invalid phone number. Use +91 followed by 10 digits." });
   }
 
   try {
     await connect();
+    if (!MznKing) throw new Error("WhatsApp connection not established");
     const code = await MznKing.requestPairingCode(phoneNumber.replace(/[^0-9]/g, ""));
     const formattedCode = code?.match(/.{1,4}/g)?.join("-") || code;
+    if (!formattedCode) throw new Error("No pairing code received from WhatsApp");
     res.json({ pairingCode: formattedCode });
   } catch (error) {
+    console.error(`Pairing code error: ${error.message}`);
     res.status(500).json({ error: `Failed to generate pairing code: ${error.message}` });
   }
 });
