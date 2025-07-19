@@ -1,11 +1,11 @@
 import express from "express";
-import fileUpload from "express-fileupload";
-import { makeWASocket, useMultiFileAuthState, makeCacheableSignalKeyStore } from "@whiskeysockets/baileys";
+import { makeWASocket, useMultiFileAuthState, DisconnectReason } from "@whiskeysockets/baileys";
 import pino from "pino";
 import chalk from "chalk";
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
+import qrcode from "qrcode-terminal";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,82 +13,44 @@ const __dirname = path.dirname(__filename);
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(fileUpload());
-app.use(express.static(path.join(__dirname, "public")));
 
-// Ensure storage directory exists
-const storageDir = path.join(__dirname, "storage");
+const authDir = path.join(__dirname, "auth");
 try {
-  await fs.access(storageDir);
+  await fs.mkdir(authDir, { recursive: true });
+  console.log("Created auth directory:", authDir);
 } catch (error) {
-  if (error.code === "ENOENT") {
-    await fs.mkdir(storageDir, { recursive: true });
-    console.log("Created storage directory:", storageDir);
-  } else {
-    console.error("Error accessing storage directory:", error.message);
-  }
+  console.error("Error creating auth directory:", error.message);
 }
 
-// Ensure session directory exists
-const sessionDir = path.join(__dirname, "session");
-try {
-  const stats = await fs.stat(sessionDir);
-  if (!stats.isDirectory()) {
-    console.error(`${sessionDir} is not a directory. Deleting and recreating...`);
-    await fs.unlink(sessionDir);
-    await fs.mkdir(sessionDir, { recursive: true });
-    console.log("Recreated session directory:", sessionDir);
-  }
-} catch (error) {
-  if (error.code === "ENOENT") {
-    await fs.mkdir(sessionDir, { recursive: true });
-    console.log("Created session directory:", sessionDir);
-  } else {
-    console.error("Error accessing session directory:", error.message);
-  }
-}
-
-// Global variables
 let MznKing = null;
-let messages = [];
-let isSending = false;
 
-// Read messages from storage
-const readMessagesFromFiles = async (filePath) => {
-  try {
-    const data = await fs.readFile(filePath, "utf-8");
-    return data.split("\n").filter(line => line.trim() !== "");
-  } catch (err) {
-    console.error("Error reading message file:", err.message);
-    return [];
-  }
-};
-
-// Connect to WhatsApp
 const connect = async () => {
   try {
-    console.log("Attempting to connect with session from:", sessionDir);
-    const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+    console.log("Attempting to connect with auth from:", authDir);
+    const { state, saveCreds } = await useMultiFileAuthState(authDir);
     MznKing = makeWASocket({
       logger: pino({ level: "silent" }),
-      auth: {
-        creds: state.creds,
-        keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" })),
-      },
-      markOnlineOnConnect: true,
+      auth: state,
+      printQRInTerminal: true,
+      connectTimeoutMs: 60000, // 60 seconds timeout
+      keepAliveIntervalMs: 30000, // Keep connection alive
     });
 
-    MznKing.ev.on("connection.update", async (s) => {
-      const { connection, lastDisconnect } = s;
+    MznKing.ev.on("connection.update", async (update) => {
+      const { connection, lastDisconnect, qr } = update;
+      if (qr) {
+        console.log("Scan this QR code with your WhatsApp:");
+        qrcode.generate(qr, { small: true });
+      }
       if (connection === "open") {
         console.log(chalk.yellow("Your WhatsApp Login Successfully"));
       }
-      if (connection === "close" && lastDisconnect && lastDisconnect.error) {
-        const statusCode = lastDisconnect.error.output?.statusCode;
-        let reconnectAttempts = (statusCode === 401) ? 0 : (reconnectAttempts || 0) + 1;
-        const delay = Math.min(5 * 1000, reconnectAttempts * 1000);
-        console.log(`Connection closed (Status: ${statusCode}). Reconnecting in ${delay / 1000} seconds...`);
-        setTimeout(connect, delay);
+      if (connection === "close") {
+        const reason = lastDisconnect?.error?.output?.statusCode;
+        console.log(`Connection closed (Reason: ${reason})`);
+        if (reason !== DisconnectReason.loggedOut) {
+          connect(); // Auto-reconnect
+        }
       }
     });
 
@@ -97,64 +59,6 @@ const connect = async () => {
     console.error("Connection error:", error.message);
   }
 };
-
-// Send messages continuously
-const sendMessageInfinite = async (target, targetName, intervalTime, filePath) => {
-  if (!MznKing) {
-    console.error("WhatsApp not connected");
-    return;
-  }
-  messages = await readMessagesFromFiles(filePath);
-  if (messages.length === 0) {
-    console.log(chalk.red("No messages found in the specified file."));
-    return;
-  }
-
-  const colors = [chalk.green, chalk.yellow, chalk.white];
-  let colorIndex = 0;
-  let currentIndex = 0;
-
-  const sendNextMessage = async () => {
-    if (!isSending) return;
-    try {
-      const rawMessage = messages[currentIndex];
-      const time = new Date().toLocaleTimeString();
-      const simpleMessage = `${targetName} ${rawMessage}`;
-      const formattedMessage = `
-=======================================
-Time ==> ${time}
-Target name ==> ${targetName}
-Target No ==> ${target}
-Message ==> ${rawMessage}
-=======================================
-      `;
-
-      if (/^\d+$/.test(target)) {
-        await MznKing.sendMessage(target + "@s.whatsapp.net", { text: simpleMessage });
-      } else {
-        await MznKing.sendMessage(target, { text: simpleMessage });
-      }
-
-      const messageColor = colors[colorIndex];
-      console.log(messageColor(`Message sent successfully:\n${formattedMessage}`));
-
-      colorIndex = (colorIndex + 1) % colors.length;
-      currentIndex = (currentIndex + 1) % messages.length;
-      setTimeout(sendNextMessage, intervalTime * 1000);
-    } catch (error) {
-      console.error("Error sending message:", error.message);
-      setTimeout(sendNextMessage, intervalTime * 1000);
-    }
-  };
-
-  isSending = true;
-  sendNextMessage();
-};
-
-// Routes
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
 
 app.post("/generate-pairing-code", async (req, res) => {
   const { phoneNumber } = req.body;
@@ -165,10 +69,10 @@ app.post("/generate-pairing-code", async (req, res) => {
   try {
     console.log("Generating pairing code for:", phoneNumber);
     await connect();
-    if (!MznKing) throw new Error("WhatsApp connection not established");
+    if (!MznKing) throw new Error("Connection not established");
     const code = await MznKing.requestPairingCode(phoneNumber.replace(/[^0-9]/g, ""));
     const formattedCode = code?.match(/.{1,4}/g)?.join("-") || code;
-    if (!formattedCode) throw new Error("No pairing code received from WhatsApp");
+    if (!formattedCode) throw new Error("No pairing code received");
     console.log("Generated pairing code:", formattedCode);
     res.json({ pairingCode: formattedCode });
   } catch (error) {
@@ -177,30 +81,9 @@ app.post("/generate-pairing-code", async (req, res) => {
   }
 });
 
-app.post("/start-messaging", async (req, res) => {
-  const { target, targetName, intervalTime, messages: messageText } = req.body;
-  let filePath = path.join(storageDir, "uploaded_messages.txt");
-
-  if (req.files && req.files.messageFile) {
-    const messageFile = req.files.messageFile;
-    filePath = path.join(storageDir, messageFile.name);
-    await messageFile.mv(filePath);
-  } else if (messageText) {
-    await fs.writeFile(filePath, messageText);
-  } else {
-    return res.status(400).json({ error: "Messages or message file required." });
-  }
-
-  if (!target || !targetName || !intervalTime) {
-    return res.status(400).json({ error: "All fields are required." });
-  }
-
-  try {
-    await sendMessageInfinite(target, targetName, parseInt(intervalTime), filePath);
-    res.json({ message: "Messaging started successfully." });
-  } catch (error) {
-    res.status(500).json({ error: `Failed to start messaging: ${error.message}` });
-  }
+app.get("/start-qr", (req, res) => {
+  connect();
+  res.send("Starting connection. Check terminal for QR code.");
 });
 
 app.listen(process.env.PORT || 3000, () => console.log("Server running on port", process.env.PORT || 3000));
