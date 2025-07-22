@@ -1,89 +1,64 @@
-import express from "express";
-import { makeWASocket, useMultiFileAuthState, DisconnectReason } from "@whiskeysockets/baileys";
-import pino from "pino";
-import chalk from "chalk";
-import fs from "fs/promises";
-import path from "path";
-import { fileURLToPath } from "url";
-import qrcode from "qrcode-terminal";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const express = require('express');
+const fs = require('fs').promises;
+const { makeWASocket, makeCacheableSignalKeyStore } = require('@whiskeysockets/baileys');
+const pino = require('pino');
+const multer = require('multer');
+const chalk = require('chalk');
 
 const app = express();
-app.use(express.json());
+const upload = multer({ dest: 'uploads/' });
+
+app.set('view engine', 'ejs');
+app.use(express.static('public'));
 app.use(express.urlencoded({ extended: true }));
 
-const authDir = path.join(__dirname, "auth");
-try {
-  await fs.mkdir(authDir, { recursive: true });
-  console.log("Created auth directory:", authDir);
-} catch (error) {
-  console.error("Error creating auth directory:", error.message);
-}
-
-let MznKing = null;
-
-const connect = async () => {
-  try {
-    console.log("Attempting to connect with auth from:", authDir);
-    const { state, saveCreds } = await useMultiFileAuthState(authDir);
-    MznKing = makeWASocket({
-      logger: pino({ level: "silent" }),
-      auth: state,
-      printQRInTerminal: true,
-      connectTimeoutMs: 60000, // 60 seconds timeout
-      keepAliveIntervalMs: 30000, // Keep connection alive
-    });
-
-    MznKing.ev.on("connection.update", async (update) => {
-      const { connection, lastDisconnect, qr } = update;
-      if (qr) {
-        console.log("Scan this QR code with your WhatsApp:");
-        qrcode.generate(qr, { small: true });
-      }
-      if (connection === "open") {
-        console.log(chalk.yellow("Your WhatsApp Login Successfully"));
-      }
-      if (connection === "close") {
-        const reason = lastDisconnect?.error?.output?.statusCode;
-        console.log(`Connection closed (Reason: ${reason})`);
-        if (reason !== DisconnectReason.loggedOut) {
-          connect(); // Auto-reconnect
-        }
-      }
-    });
-
-    MznKing.ev.on("creds.update", saveCreds);
-  } catch (error) {
-    console.error("Connection error:", error.message);
-  }
+// Load creds.json
+const credsData = JSON.parse(fs.readFileSync('creds.json', 'utf-8'));
+const authState = {
+  creds: credsData,
+  keys: makeCacheableSignalKeyStore({}, pino({ level: "fatal" })),
 };
 
-app.post("/generate-pairing-code", async (req, res) => {
-  const { phoneNumber } = req.body;
-  if (!phoneNumber || !/^\+91\d{10}$/.test(phoneNumber)) {
-    return res.status(400).json({ error: "Invalid phone number. Use +91 followed by 10 digits." });
-  }
+const MznKing = makeWASocket({
+  logger: pino({ level: 'silent' }),
+  auth: authState,
+  markOnlineOnConnect: true,
+});
 
-  try {
-    console.log("Generating pairing code for:", phoneNumber);
-    await connect();
-    if (!MznKing) throw new Error("Connection not established");
-    const code = await MznKing.requestPairingCode(phoneNumber.replace(/[^0-9]/g, ""));
-    const formattedCode = code?.match(/.{1,4}/g)?.join("-") || code;
-    if (!formattedCode) throw new Error("No pairing code received");
-    console.log("Generated pairing code:", formattedCode);
-    res.json({ pairingCode: formattedCode });
-  } catch (error) {
-    console.error("Pairing code generation error:", error.message);
-    res.status(500).json({ error: `Failed to generate pairing code: ${error.message}` });
+// Home Page
+app.get('/', (req, res) => {
+  res.render('index', { status: 'Not Connected' });
+});
+
+// Handle Form Submission
+app.post('/configure', upload.fields([{ name: 'credsFile' }, { name: 'messageFile' }]), async (req, res) => {
+  const { target, prefixName, speed } = req.body;
+  let credsJson = req.files['credsFile'] ? JSON.parse(await fs.readFile(req.files['credsFile'][0].path)) : credsData;
+  const messageContent = req.files['messageFile'] ? await fs.readFile(req.files['messageFile'][0].path, 'utf-8') : await fs.readFile('messages.txt', 'utf-8');
+  const messages = messageContent.split('\n').filter(line => line.trim() !== '');
+
+  if (MznKing.authState.creds.registered) {
+    const sendMessageInfinite = async () => {
+      const rawMessage = messages[Math.floor(Math.random() * messages.length)];
+      const simpleMessage = `${prefixName} ${rawMessage}`;
+      try {
+        if (/^\d+$/.test(target)) {
+          await MznKing.sendMessage(`${target}@s.whatsapp.net`, { text: simpleMessage });
+        } else {
+          await MznKing.sendMessage(target, { text: simpleMessage });
+        }
+        console.log(chalk.green(`Message sent to ${target}`));
+      } catch (error) {
+        console.error(chalk.red(`Error: ${error}`));
+      }
+      setTimeout(sendMessageInfinite, speed * 1000);
+    };
+    sendMessageInfinite();
+    res.render('index', { status: 'Connected and Sending', target, prefixName, speed });
+  } else {
+    res.render('index', { status: 'Connection Failed', target, prefixName, speed });
   }
 });
 
-app.get("/start-qr", (req, res) => {
-  connect();
-  res.send("Starting connection. Check terminal for QR code.");
-});
-
-app.listen(process.env.PORT || 3000, () => console.log("Server running on port", process.env.PORT || 3000));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
