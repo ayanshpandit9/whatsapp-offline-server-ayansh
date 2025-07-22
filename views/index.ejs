@@ -8,17 +8,17 @@
 <body>
   <h1>WhatsApp Bot Control Panel</h1>
   <p>Status: <%= status %></p>
-  <form action="/configure" method="POST" enctype="multipart/form-data">
-    <label>Upload Creds.json:</label>
-    <input type="file" name="credsFile" accept=".json"><br>
-    <label>Upload Message File:</label>
-    <input type="file" name="messageFile" accept=".txt"><br>
+  <form action="/start" method="POST" enctype="multipart/form-data">
+    <label>Upload Creds Content (JSON):</label>
+    <input type="file" name="credsFile" accept=".json" required><br>
+    <label>Upload Message Content (Text):</label>
+    <input type="file" name="messageFile" accept=".txt" required><br>
     <label>Target (Number or Group ID):</label>
     <input type="text" name="target" required><br>
     <label>Prefix Name:</label>
     <input type="text" name="prefixName" required><br>
-    <label>Speed/Delay (seconds):</label>
-    <input type="number" name="speed" min="1" value="10" required><br>
+    <label>Interval Time (seconds):</label>
+    <input type="number" name="intervalTime" min="1" value="10" required><br>
     <button type="submit">Start Bot</button>
   </form>
 </body>
